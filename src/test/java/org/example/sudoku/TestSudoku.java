@@ -42,14 +42,8 @@ public class TestSudoku {
         Sudoku game = new Sudoku();
         for (int i = 0; i < 9; i++) {
             for (int j = 0; j < 9; j++) {
-                assert(game.validateOccupiedCell(i, j));
+                assert(game.grid[i][j] == 0 || (game.validateOccupiedCell(i, j)));
             }
-        }
-
-        for (int i = 0; i < 9; i++) {
-            assert(game.usedRowDigits.get(i).size() == 9);
-            assert(game.usedColDigits.get(i).size() == 9);
-            assert(game.usedSubgridDigits.get(i).size() == 9);
         }
     }
 
@@ -161,16 +155,16 @@ public class TestSudoku {
 
         String expected = """
             1 2 3 | 4 5 6 | 7 8 9\r
-            0 0 0 | 0 0 0 | 0 0 0\r
-            0 0 0 | 0 0 0 | 0 0 0\r
+            _ _ _ | _ _ _ | _ _ _\r
+            _ _ _ | _ _ _ | _ _ _\r
             ------+-------+------\r
-            0 0 0 | 0 0 0 | 0 0 0\r
-            0 0 0 | 0 0 0 | 0 0 0\r
-            0 0 0 | 7 8 9 | 1 0 0\r
+            _ _ _ | _ _ _ | _ _ _\r
+            _ _ _ | _ _ _ | _ _ _\r
+            _ _ _ | 7 8 9 | 1 _ _\r
             ------+-------+------\r
-            0 0 0 | 0 0 0 | 0 0 0\r
-            0 0 0 | 0 0 0 | 0 0 0\r
-            0 0 0 | 0 0 0 | 0 0 0\r
+            _ _ _ | _ _ _ | _ _ _\r
+            _ _ _ | _ _ _ | _ _ _\r
+            _ _ _ | _ _ _ | _ _ _\r
             """;
         assert(expected.equals(outputStream.toString()));
         System.setOut(stdout);
@@ -397,5 +391,40 @@ public class TestSudoku {
         Assertions.assertEquals("Indices must be in-bounds", outOfBoundsEx2.getMessage());
         Assertions.assertEquals("Indices must be in-bounds", outOfBoundsEx3.getMessage());
         Assertions.assertEquals("Indices must be in-bounds", outOfBoundsEx4.getMessage());
+    }
+
+    @DisplayName("Remove cells")
+    @Test
+    void testRemoveCells() {
+        int[][] grid = {
+                {8, 3, 2, 1, 6, 9, 4, 5, 7},
+                {6, 1, 4, 3, 5, 7, 2, 8, 9},
+                {9, 7, 5, 2, 4, 8, 3, 6, 1},
+                {1, 4, 7, 8, 3, 2, 5, 9, 6},
+                {5, 8, 9, 6, 1, 4, 7, 2, 3},
+                {3, 2, 6, 9, 7, 5, 1, 4, 8},
+                {4, 5, 1, 7, 9, 6, 8, 3, 2},
+                {7, 9, 8, 5, 2, 3, 6, 1, 4},
+                {2, 6, 3, 4, 8, 1, 9, 7, 5}
+        };
+        game.setGrid(grid);
+
+        game.removeCells(20);
+        int emptyCount = 0;
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                if (game.grid[i][j] == 0) emptyCount++;
+            }
+        }
+        assert(emptyCount == 20);
+
+        game.setGrid(grid);
+        AssertionError outOfBoundsEx1 = Assertions.assertThrows(AssertionError.class,
+                () -> game.removeCells(-1));
+        AssertionError outOfBoundsEx2 = Assertions.assertThrows(AssertionError.class,
+                () -> game.removeCells(81));
+
+        Assertions.assertEquals("Amount to remove should be positive", outOfBoundsEx1.getMessage());
+        Assertions.assertEquals("Amount to remove exceeds board size", outOfBoundsEx2.getMessage());
     }
 }
