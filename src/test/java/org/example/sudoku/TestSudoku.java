@@ -3,7 +3,10 @@ package org.example.sudoku;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Assertions;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -30,6 +33,23 @@ public class TestSudoku {
 
         for (int i = 0; i < 9; i++) {
             assert(game.SUBGRID_DIGITS.get(i).size() == 9);
+        }
+    }
+
+    @DisplayName("Full grid constructor")
+    @Test
+    void testConstructor() {
+        Sudoku game = new Sudoku();
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                assert(game.validateOccupiedCell(i, j));
+            }
+        }
+
+        for (int i = 0; i < 9; i++) {
+            assert(game.usedRowDigits.get(i).size() == 9);
+            assert(game.usedColDigits.get(i).size() == 9);
+            assert(game.usedSubgridDigits.get(i).size() == 9);
         }
     }
 
@@ -71,6 +91,97 @@ public class TestSudoku {
         assert(game.usedSubgridDigits.get(2).equals(new HashSet<>(List.of(7, 8, 9))));
         assert(game.usedSubgridDigits.get(4).equals(new HashSet<>(List.of(7, 8, 9))));
         assert(game.usedSubgridDigits.get(5).equals(new HashSet<>(List.of(1))));
+
+        grid = new int[][] {
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+        };
+        game.setGrid(grid);
+        for (int i = 0; i < 9; i++) {
+            assert(game.usedRowDigits.get(i).isEmpty());
+            assert(game.usedColDigits.get(i).isEmpty());
+            assert(game.usedSubgridDigits.get(i).isEmpty());
+        }
+
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                assert(game.grid[i][j] == 0);
+            }
+        }
+
+        int[][] badGrid1 = {
+                {0, 0, 0, 0, 0, 0, 0, 0, 0}
+        };
+        int[][] badGrid2 = {
+                {0},
+                {0},
+                {0},
+                {0},
+                {0},
+                {0},
+                {0},
+                {0},
+                {0}
+        };
+        AssertionError badDimEx1 = Assertions.assertThrows(AssertionError.class,
+                () -> game.setGrid(badGrid1));
+        AssertionError badDimEx2 = Assertions.assertThrows(AssertionError.class,
+                () -> game.setGrid(badGrid2));
+        assert("Incompatible grid dimensions".equals(badDimEx1.getMessage()));
+        assert("Incompatible grid dimensions".equals(badDimEx2.getMessage()));
+    }
+
+    @DisplayName("Printing grid")
+    @Test
+    void testPrintGrid() {
+        PrintStream stdout = System.out;
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(outputStream));
+
+        int[][] grid = {
+                {1, 2, 3, 4, 5, 6, 7, 8, 9},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 7, 8, 9, 1, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+        };
+        game.setGrid(grid);
+        game.printGrid();
+
+        String expected = """
+            1 2 3 | 4 5 6 | 7 8 9\r
+            0 0 0 | 0 0 0 | 0 0 0\r
+            0 0 0 | 0 0 0 | 0 0 0\r
+            ------+-------+------\r
+            0 0 0 | 0 0 0 | 0 0 0\r
+            0 0 0 | 0 0 0 | 0 0 0\r
+            0 0 0 | 7 8 9 | 1 0 0\r
+            ------+-------+------\r
+            0 0 0 | 0 0 0 | 0 0 0\r
+            0 0 0 | 0 0 0 | 0 0 0\r
+            0 0 0 | 0 0 0 | 0 0 0\r
+            """;
+        assert(expected.equals(outputStream.toString()));
+        System.setOut(stdout);
+    }
+
+    @DisplayName("Get subgrid index")
+    @Test
+    void testGetSubgridIdx() {
+        assert(Sudoku.getSubgridIdx(0, 0) == 0);
+        assert(Sudoku.getSubgridIdx(3, 0) == 3);
+        assert(Sudoku.getSubgridIdx(6, 6) == 8);
     }
 
     @DisplayName("Get next index")
@@ -94,5 +205,197 @@ public class TestSudoku {
             if (i % 4 == 0) assert(game.usedSubgridDigits.get(i).size() == 9);
             else assert(game.usedSubgridDigits.get(i).isEmpty());
         }
+    }
+
+    @DisplayName("Clear")
+    @Test
+    void testClear() {
+        int[][] grid = {
+                {1, 2, 3, 4, 5, 6, 7, 8, 9},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 7, 8, 9, 1, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+        };
+        game.setGrid(grid);
+        game.clear();
+        for (int i = 0; i < 9; i++) {
+            assert(Arrays.equals(game.grid[i], new int[] {0, 0, 0, 0, 0, 0, 0, 0, 0}));
+            assert(game.usedRowDigits.get(i).isEmpty());
+            assert(game.usedColDigits.get(i).isEmpty());
+            assert(game.usedSubgridDigits.get(i).isEmpty());
+        }
+    }
+
+    @DisplayName("Fill single subgrid")
+    @Test
+    void testFillSubgridWithoutRestrictions() {
+        game.fillSubgridWithoutRestrictions(0, 0);
+        for (int i = 0; i < 3; i++) {
+            assert(game.usedRowDigits.get(i).size() == 3);
+            assert(game.usedColDigits.get(i).size() == 3);
+        }
+        assert(game.usedSubgridDigits.getFirst().size() == 9);
+
+        game.fillSubgridWithoutRestrictions(6, 3);
+        for (int i = 0; i < 3; i++) {
+            assert(game.usedRowDigits.get(i + 6).size() == 3);
+            assert(game.usedColDigits.get(i + 3).size() == 3);
+        }
+        assert(game.usedSubgridDigits.get(7).size() == 9);
+
+        AssertionError outOfBoundsEx1 = Assertions.assertThrows(AssertionError.class,
+                () -> game.fillSubgridWithoutRestrictions(9, 0));
+        AssertionError outOfBoundsEx2 = Assertions.assertThrows(AssertionError.class,
+                () -> game.fillSubgridWithoutRestrictions(-3, 0));
+        AssertionError outOfBoundsEx3 = Assertions.assertThrows(AssertionError.class,
+                () -> game.fillSubgridWithoutRestrictions(0, 9));
+        AssertionError outOfBoundsEx4 = Assertions.assertThrows(AssertionError.class,
+                () -> game.fillSubgridWithoutRestrictions(0, -3));
+
+        Assertions.assertEquals("Indices must be in-bounds", outOfBoundsEx1.getMessage());
+        Assertions.assertEquals("Indices must be in-bounds", outOfBoundsEx2.getMessage());
+        Assertions.assertEquals("Indices must be in-bounds", outOfBoundsEx3.getMessage());
+        Assertions.assertEquals("Indices must be in-bounds", outOfBoundsEx4.getMessage());
+
+        AssertionError nonalignedEx1 = Assertions.assertThrows(AssertionError.class,
+                () -> game.fillSubgridWithoutRestrictions(1, 0));
+        AssertionError nonalignedEx2 = Assertions.assertThrows(AssertionError.class,
+                () -> game.fillSubgridWithoutRestrictions(0, 1));
+        Assertions.assertEquals("Subgrid must be aligned to grid", nonalignedEx1.getMessage());
+        Assertions.assertEquals("Subgrid must be aligned to grid", nonalignedEx2.getMessage());
+    }
+
+    @DisplayName("Fill remaining")
+    @Test
+    void testFillRemaining() { // todo: add assertion test case
+        int[][] grid = {
+                {8, 3, 2, 1, 6, 9, 4, 5, 7},
+                {6, 1, 4, 3, 5, 7, 2, 8, 9},
+                {9, 7, 5, 2, 4, 8, 3, 6, 1},
+                {1, 4, 7, 8, 3, 2, 5, 9, 6},
+                {5, 8, 9, 6, 1, 4, 7, 2, 3},
+                {3, 2, 6, 9, 7, 5, 1, 4, 8},
+                {4, 5, 1, 7, 9, 6, 8, 3, 2},
+                {7, 9, 8, 5, 2, 3, 6, 1, 4},
+                {2, 6, 3, 4, 8, 1, 9, 7, 0}
+        };
+        game.setGrid(grid);
+        game.fillRemaining(8, 8);
+        assert(game.grid[8][8] == 5);
+
+        game.clear();
+        assert(game.fillRemaining(0, 0));
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                assert(game.grid[i][j] != 0);
+            }
+        }
+
+        for (int i = 0; i < 9; i++) {
+            assert(game.usedRowDigits.get(i).size() == 9);
+            assert(game.usedColDigits.get(i).size() == 9);
+            assert(game.usedSubgridDigits.get(i).size() == 9);
+        }
+
+        assert(game.fillRemaining(10, 0));
+        assert(game.fillRemaining(0, 10));
+
+        AssertionError outOfBoundsEx1 = Assertions.assertThrows(AssertionError.class,
+                () -> game.fillRemaining(-1, 0));
+        AssertionError outOfBoundsEx2 = Assertions.assertThrows(AssertionError.class,
+                () -> game.fillRemaining(0, -1));
+
+        Assertions.assertEquals("Indices must be positive", outOfBoundsEx1.getMessage());
+        Assertions.assertEquals("Indices must be positive", outOfBoundsEx2.getMessage());
+    }
+
+    @DisplayName("Validate empty cell")
+    @Test
+    void testValidateEmptyCell() {
+        int[][] grid = {
+                {1, 2, 3, 4, 5, 6, 7, 8, 9},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 7, 8, 9, 1, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+        };
+        game.setGrid(grid);
+        assert(game.validateDigitForEmptyCell(4, 1, 0));
+        assert(game.validateDigitForEmptyCell(4, 5, 2));
+        assert(!game.validateDigitForEmptyCell(4, 6, 3));
+        assert(!game.validateDigitForEmptyCell(7, 5, 2));
+        assert(!game.validateDigitForEmptyCell(8, 4, 5));
+
+        AssertionError nonEmptyEx = Assertions.assertThrows(AssertionError.class,
+                                    () -> game.validateDigitForEmptyCell(1, 0, 0));
+        Assertions.assertEquals("Cell must be empty", nonEmptyEx.getMessage());
+
+        AssertionError outOfBoundsEx1 = Assertions.assertThrows(AssertionError.class,
+                () -> game.validateDigitForEmptyCell(1, 9, 0));
+        AssertionError outOfBoundsEx2 = Assertions.assertThrows(AssertionError.class,
+                () -> game.validateDigitForEmptyCell(1, -1, 0));
+        AssertionError outOfBoundsEx3 = Assertions.assertThrows(AssertionError.class,
+                () -> game.validateDigitForEmptyCell(1, 0, 9));
+        AssertionError outOfBoundsEx4 = Assertions.assertThrows(AssertionError.class,
+                () -> game.validateDigitForEmptyCell(1, 0, -1));
+
+        Assertions.assertEquals("Indices must be in-bounds", outOfBoundsEx1.getMessage());
+        Assertions.assertEquals("Indices must be in-bounds", outOfBoundsEx2.getMessage());
+        Assertions.assertEquals("Indices must be in-bounds", outOfBoundsEx3.getMessage());
+        Assertions.assertEquals("Indices must be in-bounds", outOfBoundsEx4.getMessage());
+    }
+
+    @DisplayName("Validate occupied cell")
+    @Test
+    void testValidateOccupiedCell() {
+        int[][] grid = {
+                {8, 3, 2, 1, 6, 9, 4, 5, 7},
+                {6, 1, 4, 3, 5, 7, 2, 8, 9},
+                {9, 7, 5, 2, 4, 8, 3, 6, 1},
+                {1, 4, 7, 8, 3, 2, 5, 9, 6},
+                {5, 8, 9, 6, 1, 4, 7, 2, 3},
+                {3, 2, 6, 9, 7, 5, 1, 4, 8},
+                {4, 5, 1, 7, 9, 6, 8, 3, 2},
+                {7, 9, 8, 5, 2, 3, 6, 1, 4},
+                {2, 6, 3, 4, 8, 1, 9, 7, 5}
+        };
+        game.setGrid(grid);
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                assert(game.validateOccupiedCell(i, j));
+            }
+        }
+
+        grid[0][0] = 3;
+        game.setGrid(grid);
+        assert(!game.validateOccupiedCell(0, 0));
+
+        grid[0][0] = 0;
+        game.setGrid(grid);
+        AssertionError ex = Assertions.assertThrows(AssertionError.class,
+                                            () -> game.validateOccupiedCell(0, 0));
+        Assertions.assertEquals("Cell must not be 0", ex.getMessage());
+        AssertionError outOfBoundsEx1 = Assertions.assertThrows(AssertionError.class,
+                () -> game.validateOccupiedCell(9, 0));
+        AssertionError outOfBoundsEx2 = Assertions.assertThrows(AssertionError.class,
+                () -> game.validateOccupiedCell(-1, 0));
+        AssertionError outOfBoundsEx3 = Assertions.assertThrows(AssertionError.class,
+                () -> game.validateOccupiedCell(0, 9));
+        AssertionError outOfBoundsEx4 = Assertions.assertThrows(AssertionError.class,
+                () -> game.validateOccupiedCell(0, -1));
+
+        Assertions.assertEquals("Indices must be in-bounds", outOfBoundsEx1.getMessage());
+        Assertions.assertEquals("Indices must be in-bounds", outOfBoundsEx2.getMessage());
+        Assertions.assertEquals("Indices must be in-bounds", outOfBoundsEx3.getMessage());
+        Assertions.assertEquals("Indices must be in-bounds", outOfBoundsEx4.getMessage());
     }
 }
