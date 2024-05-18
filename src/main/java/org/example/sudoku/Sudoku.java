@@ -40,12 +40,12 @@ public class Sudoku {
      * @param empty whether the grid should be empty
      */
     public Sudoku(boolean empty) {
+        initDigits();
         for (int i = 0; i < 9; i++) {
             usedRowDigits.add(new HashSet<>());
             usedColDigits.add(new HashSet<>());
             usedSubgridDigits.add(new HashSet<>());
         }
-        initDigits();
         grid = new int[9][9];
 
         if (!empty) {
@@ -55,8 +55,19 @@ public class Sudoku {
 
     }
 
+    void clear() {
+        grid = new int[9][9];
+        for (int i = 0; i < 9; i++) {
+            usedRowDigits.get(i).clear();
+            usedColDigits.get(i).clear();
+            usedSubgridDigits.get(i).clear();
+        }
+    }
+
     void setGrid(int[][] grid) {
-        assert(grid.length == 9 && grid[0].length == 9);
+        assert(grid.length == 9 && grid[0].length == 9) : "Incompatible grid dimensions";
+
+        clear();
 
         int digit;
         for (int i = 0; i < 9; i++) {
@@ -113,7 +124,14 @@ public class Sudoku {
         }
     }
 
-    private void fillSubgridWithoutRestrictions(int startI, int startJ) {
+    /**
+     * Fill a given subgrid without any digit restrictions
+     * @param startI the top row index of the 3x3 subgrid
+     * @param startJ the left col index of the 3x3 subgrid
+     */
+    void fillSubgridWithoutRestrictions(int startI, int startJ) {
+        assert(0 <= startI && startI < 9 && 0 <= startJ && startJ < 9) : "Indices must be in-bounds";
+        assert(startI % 3 == 0 && startJ % 3 == 0) : "Subgrid must be aligned to grid";
         int chosenDigit, subgridIdx;
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
@@ -134,7 +152,7 @@ public class Sudoku {
      * @param j the col index of the single cell
      * @return which 3x3 subgrid the cell falls in
      */
-    private int getSubgridIdx(int i, int j) {
+    static int getSubgridIdx(int i, int j) {
         return i / 3 * 3 + j / 3;
     }
 
@@ -162,17 +180,16 @@ public class Sudoku {
      * @param j the col index from which to start filling
      * @return whether the remaining grid is fill-able
      */
-    private boolean fillRemaining(int i, int j) {
-        if (i >= 9 || j >= 9) {
-            return true;
-        }
+    boolean fillRemaining(int i, int j) {
+        assert(i >= 0 && j >= 0) : "Indices must be positive";
+        if (i >= 9 || j >= 9) return true;
 
         int[] nextIdx = getNextIdx(i, j);
-        if (i / 3 == j / 3) return fillRemaining(nextIdx[0], nextIdx[1]);
+        if (grid[i][j] != 0) return fillRemaining(nextIdx[0], nextIdx[1]);
 
         int subgridIdx = getSubgridIdx(i, j);
         for (int digit : SUBGRID_DIGITS.get(subgridIdx)) {
-            if (validateCell(digit, i, j)) {
+            if (validateDigitForEmptyCell(digit, i, j)) {
                 grid[i][j] = digit;
                 usedRowDigits.get(i).add(digit);
                 usedColDigits.get(j).add(digit);
@@ -188,18 +205,45 @@ public class Sudoku {
     }
 
     /**
-     * Check if a digit in a certain cell is valid
+     * Check if a digit would be valid in a certain cell.
      * <p>
-     *     Only returns whether or not it is valid, and does not handle removal of the digit. Valid means
-     *     that no other digit in the same row, column, or subgrid is the same digit
+     *     Intended use is to check whether placing a digit in an empty cell is valid.
      * </p>
      * @param digit the digit to check
      * @param i the row index of the cell
      * @param j the col index of the cell
      * @return whether a digit in a given cell is valid
      */
-    private boolean validateCell(int digit, int i, int j) {
-        return !usedRowDigits.get(i).contains(digit) && !usedColDigits.get(j).contains(digit)
-                && !usedSubgridDigits.get(i / 3 * 3 + j / 3).contains(digit);
+    boolean validateDigitForEmptyCell(int digit, int i, int j) {
+        assert(0 <= i && i < 9 && 0 <= j && j < 9) : "Indices must be in-bounds";
+        assert(grid[i][j] == 0) : "Cell must be empty";
+        if (!usedRowDigits.get(i).contains(digit) && !usedColDigits.get(j).contains(digit)
+                && !usedSubgridDigits.get(i / 3 * 3 + j / 3).contains(digit)) {
+            return true;
+        } else return grid[i][j] == digit;
+    }
+
+    boolean validateOccupiedCell(int i, int j) {
+        assert(0 <= i && i < 9 && 0 <= j && j < 9) : "Indices must be in-bounds";
+        assert(grid[i][j] != 0) : "Cell must not be 0";
+        Set<Integer> row = new HashSet<>();
+        Set<Integer> col = new HashSet<>();
+        Set<Integer> subgrid = new HashSet<>();
+
+        for (int idx = 0; idx < 9; idx++) {
+            if (idx != i) row.add(grid[idx][j]);
+            if (idx != j) col.add(grid[i][idx]);
+        }
+
+        int subgridStartI = i / 3 * 3;
+        int subgridStartJ = j / 3 * 3;
+        for (int ii = subgridStartI; ii < subgridStartI + 3; ii++) {
+            for (int jj = subgridStartJ; jj < subgridStartJ + 3; jj++) {
+                if (ii != i && jj != j) subgrid.add(grid[ii][jj]);
+            }
+        }
+
+        int digit = grid[i][j];
+        return !row.contains(digit) && !col.contains(digit) && !subgrid.contains(digit);
     }
 }
