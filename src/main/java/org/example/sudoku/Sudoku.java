@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.Random;
 
 /**
  * Sudoku class to manage a game
@@ -13,11 +14,15 @@ import java.util.HashSet;
 public class Sudoku {
     final static List<Integer> DIGITS = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9);
     final List<List<Integer>> SUBGRID_DIGITS = new ArrayList<>();
+    final int MIN_REMOVE = 40;
+    final int MAX_REMOVE = 50;
 
     int[][] grid;
     List<Set<Integer>> usedRowDigits = new ArrayList<>();
     List<Set<Integer>> usedColDigits = new ArrayList<>();
     List<Set<Integer>> usedSubgridDigits = new ArrayList<>();
+
+    Random rand = new Random();
 
     /* todo: use a boolean[][] to check for any incorrect squares, so that we know
              if the puzzle is correct or not. And to check for all(finished), we should
@@ -51,6 +56,8 @@ public class Sudoku {
         if (!empty) {
             initDiagonalSubgrids();
             fillRemaining(0, 0);
+            int removeAmount = rand.nextInt(MIN_REMOVE, MAX_REMOVE);
+            removeCells(removeAmount);
         }
 
     }
@@ -102,7 +109,7 @@ public class Sudoku {
     public void printGrid() {
         for (int i = 0; i < 9; i++) {
             for (int j = 0; j < 9; j++) {
-                System.out.print(grid[i][j]);
+                System.out.print(grid[i][j] != 0 ? grid[i][j] : "_");
                 if (j != 8) System.out.print(" ");
                 if (j == 2 || j == 5) System.out.print("| ");
             }
@@ -245,5 +252,35 @@ public class Sudoku {
 
         int digit = grid[i][j];
         return !row.contains(digit) && !col.contains(digit) && !subgrid.contains(digit);
+    }
+
+    /**
+     * Remove a number of cells between {@code MIN_REMOVE} and {@code MAX_REMOVE}
+     * <p>
+     *     Should only be used in the case that everything is validated already, otherwise
+     *     unexpected behavior may occur due to the removal of a digit from a set
+     * </p>
+     * @param removeAmount the number of cells to remove
+     */
+    void removeCells(int removeAmount) {
+        assert(0 <= removeAmount) : "Amount to remove should be positive";
+        assert(removeAmount < 81) : "Amount to remove exceeds board size";
+        List<Integer> toRemove = rand.ints(0, 81)
+                .distinct()
+                .limit(removeAmount)
+                .boxed()
+                .toList();
+
+        int i, j, digit;
+        for (int pos : toRemove) {
+            i = pos / 9;
+            j = pos % 9;
+            digit = grid[i][j];
+
+            grid[i][j] = 0;
+            usedRowDigits.get(i).remove(digit);
+            usedColDigits.get(j).remove(digit);
+            usedSubgridDigits.get(getSubgridIdx(i, j)).remove(digit);
+        }
     }
 }
