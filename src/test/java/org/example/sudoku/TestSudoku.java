@@ -25,11 +25,15 @@ public class TestSudoku {
     void testEmptyConstructor() {
         for (int i = 0; i < 9; i++) {
             assert(Arrays.equals(game.grid[i], new int[] {0, 0, 0, 0, 0, 0, 0, 0, 0}));
+            assert(Arrays.equals(game.correct[i],
+                    new boolean[] {false, false, false, false, false, false, false, false, false}));
         }
         assert(game.usedRowDigits.size() == 9);
         assert(game.usedColDigits.size() == 9);
         assert(game.usedSubgridDigits.size() == 9);
         assert(game.SUBGRID_DIGITS.size() == 9);
+        assert(game.incorrectCount == 81);
+        assert(game.blankCount == 81);
 
         for (int i = 0; i < 9; i++) {
             assert(game.SUBGRID_DIGITS.get(i).size() == 9);
@@ -45,6 +49,38 @@ public class TestSudoku {
                 assert(game.grid[i][j] == 0 || (game.validateOccupiedCell(i, j)));
             }
         }
+    }
+
+    @DisplayName("Clear")
+    @Test
+    void testClear() {
+        int[][] grid = {
+                {1, 2, 3, 4, 5, 6, 7, 8, 9},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 7, 8, 9, 1, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+        };
+        game.setGrid(grid);
+        game.clear();
+        for (int i = 0; i < 9; i++) {
+            assert(Arrays.equals(game.grid[i], new int[] {0, 0, 0, 0, 0, 0, 0, 0, 0}));
+            assert(game.usedRowDigits.get(i).isEmpty());
+            assert(game.usedColDigits.get(i).isEmpty());
+            assert(game.usedSubgridDigits.get(i).isEmpty());
+        }
+
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                assert(!game.correct[i][j]);
+            }
+        }
+        assert(game.incorrectCount == 81);
+        assert(game.blankCount == 81);
     }
 
     @DisplayName("Setting grid")
@@ -67,6 +103,14 @@ public class TestSudoku {
             assert(Arrays.equals(game.grid[i], grid[i]));
         }
 
+        int correctCount = 0;
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                if (game.correct[i][j]) correctCount++;
+            }
+        }
+        assert(correctCount == 13);
+
         assert(game.usedRowDigits.get(0).equals(new HashSet<>(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9))));
         assert(game.usedRowDigits.get(5).equals(new HashSet<>(List.of(1, 7, 8, 9))));
 
@@ -86,6 +130,9 @@ public class TestSudoku {
         assert(game.usedSubgridDigits.get(4).equals(new HashSet<>(List.of(7, 8, 9))));
         assert(game.usedSubgridDigits.get(5).equals(new HashSet<>(List.of(1))));
 
+        assert(game.incorrectCount == 68);
+        assert(game.blankCount == 68);
+
         grid = new int[][] {
                 {0, 0, 0, 0, 0, 0, 0, 0, 0},
                 {0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -104,11 +151,17 @@ public class TestSudoku {
             assert(game.usedSubgridDigits.get(i).isEmpty());
         }
 
+        assert(game.incorrectCount == 81);
+        assert(game.blankCount == 81);
+
+        correctCount = 0;
         for (int i = 0; i < 9; i++) {
             for (int j = 0; j < 9; j++) {
                 assert(game.grid[i][j] == 0);
+                if (game.correct[i][j]) correctCount++;
             }
         }
+        assert(correctCount == 0);
 
         int[][] badGrid1 = {
                 {0, 0, 0, 0, 0, 0, 0, 0, 0}
@@ -170,22 +223,6 @@ public class TestSudoku {
         System.setOut(stdout);
     }
 
-    @DisplayName("Get subgrid index")
-    @Test
-    void testGetSubgridIdx() {
-        assert(Sudoku.getSubgridIdx(0, 0) == 0);
-        assert(Sudoku.getSubgridIdx(3, 0) == 3);
-        assert(Sudoku.getSubgridIdx(6, 6) == 8);
-    }
-
-    @DisplayName("Get next index")
-    @Test
-    void testGetNextIdx() {
-        assert(Arrays.equals(new int[] {1, 3}, Sudoku.getNextIdx(1, 2)));
-        assert(Arrays.equals(new int[] {0, 1}, Sudoku.getNextIdx(0, 0)));
-        assert(Arrays.equals(new int[] {1, 0}, Sudoku.getNextIdx(0, 8)));
-    }
-
     @DisplayName("Diagonal subgrids")
     @Test
     void testInitDiagonalSubgrids() {
@@ -199,30 +236,15 @@ public class TestSudoku {
             if (i % 4 == 0) assert(game.usedSubgridDigits.get(i).size() == 9);
             else assert(game.usedSubgridDigits.get(i).isEmpty());
         }
-    }
 
-    @DisplayName("Clear")
-    @Test
-    void testClear() {
-        int[][] grid = {
-                {1, 2, 3, 4, 5, 6, 7, 8, 9},
-                {0, 0, 0, 0, 0, 0, 0, 0, 0},
-                {0, 0, 0, 0, 0, 0, 0, 0, 0},
-                {0, 0, 0, 0, 0, 0, 0, 0, 0},
-                {0, 0, 0, 0, 0, 0, 0, 0, 0},
-                {0, 0, 0, 7, 8, 9, 1, 0, 0},
-                {0, 0, 0, 0, 0, 0, 0, 0, 0},
-                {0, 0, 0, 0, 0, 0, 0, 0, 0},
-                {0, 0, 0, 0, 0, 0, 0, 0, 0},
-        };
-        game.setGrid(grid);
-        game.clear();
         for (int i = 0; i < 9; i++) {
-            assert(Arrays.equals(game.grid[i], new int[] {0, 0, 0, 0, 0, 0, 0, 0, 0}));
-            assert(game.usedRowDigits.get(i).isEmpty());
-            assert(game.usedColDigits.get(i).isEmpty());
-            assert(game.usedSubgridDigits.get(i).isEmpty());
+            for (int j = 0; j < 9; j++) {
+                assert(i / 3 != j / 3 || (game.correct[i][j]));
+            }
         }
+
+        assert(game.incorrectCount == 54);
+        assert(game.blankCount == 54);
     }
 
     @DisplayName("Fill single subgrid")
@@ -241,6 +263,16 @@ public class TestSudoku {
             assert(game.usedColDigits.get(i + 3).size() == 3);
         }
         assert(game.usedSubgridDigits.get(7).size() == 9);
+
+        int correctCount = 0;
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                if (game.correct[i][j]) correctCount++;
+            }
+        }
+        assert(correctCount == 18);
+        assert(game.incorrectCount == 63);
+        assert(game.blankCount == 63);
 
         AssertionError outOfBoundsEx1 = Assertions.assertThrows(AssertionError.class,
                 () -> game.fillSubgridWithoutRestrictions(9, 0));
@@ -266,7 +298,7 @@ public class TestSudoku {
 
     @DisplayName("Fill remaining")
     @Test
-    void testFillRemaining() { // todo: add assertion test case
+    void testFillRemaining() {
         int[][] grid = {
                 {8, 3, 2, 1, 6, 9, 4, 5, 7},
                 {6, 1, 4, 3, 5, 7, 2, 8, 9},
@@ -283,7 +315,8 @@ public class TestSudoku {
         assert(game.grid[8][8] == 5);
 
         game.clear();
-        assert(game.fillRemaining(0, 0));
+        boolean temp = game.fillRemaining(0, 0);
+        assert(temp);
         for (int i = 0; i < 9; i++) {
             for (int j = 0; j < 9; j++) {
                 assert(game.grid[i][j] != 0);
@@ -296,8 +329,10 @@ public class TestSudoku {
             assert(game.usedSubgridDigits.get(i).size() == 9);
         }
 
-        assert(game.fillRemaining(10, 0));
-        assert(game.fillRemaining(0, 10));
+        temp = game.fillRemaining(10, 0);
+        assert(temp);
+        temp = game.fillRemaining(0, 10);
+        assert(temp);
 
         AssertionError outOfBoundsEx1 = Assertions.assertThrows(AssertionError.class,
                 () -> game.fillRemaining(-1, 0));
@@ -310,7 +345,7 @@ public class TestSudoku {
 
     @DisplayName("Validate empty cell")
     @Test
-    void testValidateEmptyCell() {
+    void testValidateDigitForEmptyCell() {
         int[][] grid = {
                 {1, 2, 3, 4, 5, 6, 7, 8, 9},
                 {0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -395,7 +430,7 @@ public class TestSudoku {
 
     @DisplayName("Remove cells")
     @Test
-    void testRemoveCells() {
+    void testRemoveRandomCells() {
         int[][] grid = {
                 {8, 3, 2, 1, 6, 9, 4, 5, 7},
                 {6, 1, 4, 3, 5, 7, 2, 8, 9},
@@ -409,7 +444,7 @@ public class TestSudoku {
         };
         game.setGrid(grid);
 
-        game.removeCells(20);
+        game.removeRandomCells(20);
         int emptyCount = 0;
         for (int i = 0; i < 9; i++) {
             for (int j = 0; j < 9; j++) {
@@ -420,11 +455,28 @@ public class TestSudoku {
 
         game.setGrid(grid);
         AssertionError outOfBoundsEx1 = Assertions.assertThrows(AssertionError.class,
-                () -> game.removeCells(-1));
+                () -> game.removeRandomCells(-1));
         AssertionError outOfBoundsEx2 = Assertions.assertThrows(AssertionError.class,
-                () -> game.removeCells(81));
+                () -> game.removeRandomCells(81));
 
         Assertions.assertEquals("Amount to remove should be positive", outOfBoundsEx1.getMessage());
         Assertions.assertEquals("Amount to remove exceeds board size", outOfBoundsEx2.getMessage());
     }
+
+    @DisplayName("Get subgrid index")
+    @Test
+    void testGetSubgridIdx() {
+        assert(Sudoku.getSubgridIdx(0, 0) == 0);
+        assert(Sudoku.getSubgridIdx(3, 0) == 3);
+        assert(Sudoku.getSubgridIdx(6, 6) == 8);
+    }
+
+    @DisplayName("Get next index")
+    @Test
+    void testGetNextIdx() {
+        assert(Arrays.equals(new int[] {1, 3}, Sudoku.getNextIdx(1, 2)));
+        assert(Arrays.equals(new int[] {0, 1}, Sudoku.getNextIdx(0, 0)));
+        assert(Arrays.equals(new int[] {1, 0}, Sudoku.getNextIdx(0, 8)));
+    }
+
 }

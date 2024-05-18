@@ -12,22 +12,25 @@ import java.util.Random;
  * Sudoku class to manage a game
  */
 public class Sudoku {
+    // Constants
     final static List<Integer> DIGITS = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9);
     final List<List<Integer>> SUBGRID_DIGITS = new ArrayList<>();
-    final int MIN_REMOVE = 40;
-    final int MAX_REMOVE = 50;
+    final static int MIN_REMOVE = 40;
+    final static int MAX_REMOVE = 50;
 
+    // Grid tracking variables
     int[][] grid;
     List<Set<Integer>> usedRowDigits = new ArrayList<>();
     List<Set<Integer>> usedColDigits = new ArrayList<>();
     List<Set<Integer>> usedSubgridDigits = new ArrayList<>();
-
-    Random rand = new Random();
-
     boolean[][] correct; // todo: when actually adding and removing cells from grids, check all other elements in the subgrid, row, and col
     int incorrectCount;
     int blankCount;
 
+    // Random
+    Random rand = new Random();
+
+    // ===== INSTANCE METHODS =====
     /**
      * Default constructor for Sudoku class
      * <p>
@@ -303,6 +306,7 @@ public class Sudoku {
             }
         }
     }
+    // ===== END INSTANCE METHODS =====
 
 
     // ===== STATIC METHODS =====
