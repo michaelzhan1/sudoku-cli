@@ -24,11 +24,9 @@ public class Sudoku {
 
     Random rand = new Random();
 
-    /* todo: use a boolean[][] to check for any incorrect squares, so that we know
-             if the puzzle is correct or not. And to check for all(finished), we should
-             keep track of an int of how many blank squares remaining, as well as an int
-             for how many incorrect squares, which is only updated on an update to a square
-    */
+    boolean[][] correct; // todo: when actually adding and removing cells from grids, check all other elements in the subgrid, row, and col
+    int incorrectCount;
+    int blankCount;
 
     /**
      * Default constructor for Sudoku class
@@ -52,42 +50,17 @@ public class Sudoku {
             usedSubgridDigits.add(new HashSet<>());
         }
         grid = new int[9][9];
+        correct = new boolean[9][9];
+        incorrectCount = 81;
+        blankCount = 81;
 
         if (!empty) {
             initDiagonalSubgrids();
             fillRemaining(0, 0);
             int removeAmount = rand.nextInt(MIN_REMOVE, MAX_REMOVE);
-            removeCells(removeAmount);
+            removeRandomCells(removeAmount);
         }
 
-    }
-
-    void clear() {
-        grid = new int[9][9];
-        for (int i = 0; i < 9; i++) {
-            usedRowDigits.get(i).clear();
-            usedColDigits.get(i).clear();
-            usedSubgridDigits.get(i).clear();
-        }
-    }
-
-    void setGrid(int[][] grid) {
-        assert(grid.length == 9 && grid[0].length == 9) : "Incompatible grid dimensions";
-
-        clear();
-
-        int digit;
-        for (int i = 0; i < 9; i++) {
-            for (int j = 0; j < 9; j++) {
-                digit = grid[i][j];
-                if (digit != 0) {
-                    this.grid[i][j] = digit;
-                    usedRowDigits.get(i).add(digit);
-                    usedColDigits.get(j).add(digit);
-                    usedSubgridDigits.get(getSubgridIdx(i, j)).add(digit);
-                }
-            }
-        }
     }
 
     /**
@@ -104,9 +77,54 @@ public class Sudoku {
     }
 
     /**
+     * Clear the grid and associated attributes
+     */
+    void clear() {
+        grid = new int[9][9];
+        correct = new boolean[9][9];
+        incorrectCount = 81;
+        blankCount = 81;
+        for (int i = 0; i < 9; i++) {
+            usedRowDigits.get(i).clear();
+            usedColDigits.get(i).clear();
+            usedSubgridDigits.get(i).clear();
+        }
+    }
+
+    /**
+     * Set the grid attribute to a given 9x9 grid
+     * <p>
+     *     Note that this should be used with a valid sudoku grid.
+     * </p>
+     * @param grid the grid to set
+     */
+    void setGrid(int[][] grid) {
+        assert(grid.length == 9 && grid[0].length == 9) : "Incompatible grid dimensions";
+
+        clear();
+
+        int digit;
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                digit = grid[i][j];
+                if (digit != 0) {
+                    this.grid[i][j] = digit;
+                    usedRowDigits.get(i).add(digit);
+                    usedColDigits.get(j).add(digit);
+                    usedSubgridDigits.get(getSubgridIdx(i, j)).add(digit);
+
+                    correct[i][j] = true;
+                    incorrectCount--;
+                    blankCount--;
+                }
+            }
+        }
+    }
+
+    /**
      * Print the sudoku grid
      */
-    public void printGrid() {
+    public void printGrid() { // "\u001b[34m for blue, used for user-input numbers"
         for (int i = 0; i < 9; i++) {
             for (int j = 0; j < 9; j++) {
                 System.out.print(grid[i][j] != 0 ? grid[i][j] : "_");
@@ -149,33 +167,12 @@ public class Sudoku {
                 usedRowDigits.get(startI + i).add(chosenDigit);
                 usedColDigits.get(startJ + j).add(chosenDigit);
                 usedSubgridDigits.get(subgridIdx).add(chosenDigit);
+
+                correct[startI + i][startJ + j] = true;
+                incorrectCount--;
+                blankCount--;
             }
         }
-    }
-
-    /**
-     * Calculate the index of the 3x3 subgrid, in row-major order
-     * @param i the row index of the single cell
-     * @param j the col index of the single cell
-     * @return which 3x3 subgrid the cell falls in
-     */
-    static int getSubgridIdx(int i, int j) {
-        return i / 3 * 3 + j / 3;
-    }
-
-    /**
-     * Get the next index pair from a given index pair, following row-major order
-     * @param i the given row index
-     * @param j the given col index
-     * @return the next index {i', j'}, accounting for wrapping around the grid
-     */
-    static int[] getNextIdx(int i, int j) {
-        j++;
-        if (j >= 9) {
-            i++;
-            j = 0;
-        }
-        return new int[] {i, j};
     }
 
     /**
@@ -201,11 +198,18 @@ public class Sudoku {
                 usedRowDigits.get(i).add(digit);
                 usedColDigits.get(j).add(digit);
                 usedSubgridDigits.get(subgridIdx).add(digit);
+                correct[i][j] = true;
+                incorrectCount--;
+                blankCount--;
+
                 if (fillRemaining(nextIdx[0], nextIdx[1])) return true;
                 grid[i][j] = 0;
                 usedRowDigits.get(i).remove(digit);
                 usedColDigits.get(j).remove(digit);
                 usedSubgridDigits.get(subgridIdx).remove(digit);
+                correct[i][j] = false;
+                incorrectCount++;
+                blankCount++;
             }
         }
         return false;
@@ -230,6 +234,15 @@ public class Sudoku {
         } else return grid[i][j] == digit;
     }
 
+    /**
+     * Check if an existing digit is valid in the cell.
+     * <p>
+     *     Intended use is on a cell that already has a nonzero digit.
+     * </p>
+     * @param i the row index of the cell
+     * @param j the col index of the cell
+     * @return whether the cell is valid
+     */
     boolean validateOccupiedCell(int i, int j) {
         assert(0 <= i && i < 9 && 0 <= j && j < 9) : "Indices must be in-bounds";
         assert(grid[i][j] != 0) : "Cell must not be 0";
@@ -257,12 +270,13 @@ public class Sudoku {
     /**
      * Remove a number of cells between {@code MIN_REMOVE} and {@code MAX_REMOVE}
      * <p>
-     *     Should only be used in the case that everything is validated already, otherwise
-     *     unexpected behavior may occur due to the removal of a digit from a set
+     *     Should only be used in the case that the grid is originally full and everything is already validated,
+     *     otherwise unexpected behavior may occur due to the removal of a digit from a set or the removal of
+     *     an already empty cell
      * </p>
      * @param removeAmount the number of cells to remove
      */
-    void removeCells(int removeAmount) {
+    void removeRandomCells(int removeAmount) {
         assert(0 <= removeAmount) : "Amount to remove should be positive";
         assert(removeAmount < 81) : "Amount to remove exceeds board size";
         List<Integer> toRemove = rand.ints(0, 81)
@@ -281,6 +295,40 @@ public class Sudoku {
             usedRowDigits.get(i).remove(digit);
             usedColDigits.get(j).remove(digit);
             usedSubgridDigits.get(getSubgridIdx(i, j)).remove(digit);
+
+            if (digit != 0) {
+                correct[i][j] = false;
+                incorrectCount++;
+                blankCount++;
+            }
         }
     }
+
+
+    // ===== STATIC METHODS =====
+    /**
+     * Calculate the index of the 3x3 subgrid, in row-major order
+     * @param i the row index of the single cell
+     * @param j the col index of the single cell
+     * @return which 3x3 subgrid the cell falls in
+     */
+    static int getSubgridIdx(int i, int j) {
+        return i / 3 * 3 + j / 3;
+    }
+
+    /**
+     * Get the next index pair from a given index pair, following row-major order
+     * @param i the given row index
+     * @param j the given col index
+     * @return the next index {i', j'}, accounting for wrapping around the grid
+     */
+    static int[] getNextIdx(int i, int j) {
+        j++;
+        if (j >= 9) {
+            i++;
+            j = 0;
+        }
+        return new int[] {i, j};
+    }
+    // ===== END STATIC METHODS =====
 }
