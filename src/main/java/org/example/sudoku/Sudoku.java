@@ -18,19 +18,20 @@ public class Sudoku {
     final static int MIN_REMOVE = 40;
     final static int MAX_REMOVE = 50;
 
+    // Grid generation helper structures
+    List<Set<Integer>> generationUsedRowDigits = new ArrayList<>();
+    List<Set<Integer>> generationUsedColDigits = new ArrayList<>();
+    List<Set<Integer>> generationUsedSubgridDigits = new ArrayList<>();
+
     // Grid tracking variables
     int[][] grid;
-    List<Set<Integer>> usedRowDigits = new ArrayList<>();
-    List<Set<Integer>> usedColDigits = new ArrayList<>();
-    List<Set<Integer>> usedSubgridDigits = new ArrayList<>();
-    boolean[][] correct; // todo: when actually adding and removing cells from grids, check all other elements in the subgrid, row, and col
-    int incorrectCount;
+    boolean[][] isStarterClue; // marks all clues that were initialized automatically, should not be modified outside of generation
     int blankCount;
 
     // Random
     Random rand = new Random();
 
-    // ===== INSTANCE METHODS =====
+    // ===== CONSTRUCTORS =====
     /**
      * Default constructor for Sudoku class
      * <p>
@@ -48,13 +49,12 @@ public class Sudoku {
     public Sudoku(boolean empty) {
         initDigits();
         for (int i = 0; i < 9; i++) {
-            usedRowDigits.add(new HashSet<>());
-            usedColDigits.add(new HashSet<>());
-            usedSubgridDigits.add(new HashSet<>());
+            generationUsedRowDigits.add(new HashSet<>());
+            generationUsedColDigits.add(new HashSet<>());
+            generationUsedSubgridDigits.add(new HashSet<>());
         }
         grid = new int[9][9];
-        correct = new boolean[9][9];
-        incorrectCount = 81;
+        isStarterClue = new boolean[9][9];
         blankCount = 81;
 
         if (!empty) {
@@ -63,9 +63,81 @@ public class Sudoku {
             int removeAmount = rand.nextInt(MIN_REMOVE, MAX_REMOVE);
             removeRandomCells(removeAmount);
         }
+    }
+    // ===== END CONSTRUCTORS =====
 
+
+    // ===== GENERAL METHODS =====
+    /**
+     * Clear the grid and associated attributes
+     */
+    void clear() {
+        grid = new int[9][9];
+        isStarterClue = new boolean[9][9];
+        blankCount = 81;
+        for (int i = 0; i < 9; i++) {
+            generationUsedRowDigits.get(i).clear();
+            generationUsedColDigits.get(i).clear();
+            generationUsedSubgridDigits.get(i).clear();
+        }
     }
 
+    /**
+     * Print the sudoku grid
+     */
+    public void printGrid() { // "\u001b[34m for blue, used for user-input numbers"
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                System.out.print(grid[i][j] != 0 ? grid[i][j] : "_");
+                if (j != 8) System.out.print(" ");
+                if (j == 2 || j == 5) System.out.print("| ");
+            }
+            System.out.println();
+            if (i == 2 || i == 5) System.out.println("------+-------+------");
+        }
+    }
+
+    /**
+     * Check if the sudoku is solved
+     * @return if the sudoku is solved
+     */
+    public boolean checkFinished() { // todo: add test
+        if (blankCount != 0) return false;
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                if (!checkCell(i, j)) return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Check if a certain cell is valid
+     * @param i the row index of the cell
+     * @param j the col index of the cell
+     * @return whether the cell is valid
+     */
+    boolean checkCell(int i, int j) {
+        int digit = grid[i][j];
+        if (digit == 0) return true;
+
+        for (int k = 0; k < 9; k++) {
+            if ((grid[i][k] == digit && k != j) || (grid[k][j] == digit && k != i)) return false;
+        }
+
+        int subgridStartI = i / 3 * 3;
+        int subgridStartJ = j / 3 * 3;
+        for (int ii = subgridStartI; ii < subgridStartI + 3; ii++) {
+            for (int jj = subgridStartJ; jj < subgridStartJ + 3; jj++) {
+                if ((ii != i || jj != j) && grid[ii][jj] == digit) return false;
+            }
+        }
+        return true;
+    }
+    // ===== END GENERAL METHODS
+
+
+    // ===== GENERATION METHODS =====
     /**
      * Initialize digits for each 3x3 subgrid for randomness
      * <p>
@@ -76,21 +148,6 @@ public class Sudoku {
         for (int i = 0; i < 9; i++) {
             Collections.shuffle(DIGITS);
             SUBGRID_DIGITS.add(DIGITS);
-        }
-    }
-
-    /**
-     * Clear the grid and associated attributes
-     */
-    void clear() {
-        grid = new int[9][9];
-        correct = new boolean[9][9];
-        incorrectCount = 81;
-        blankCount = 81;
-        for (int i = 0; i < 9; i++) {
-            usedRowDigits.get(i).clear();
-            usedColDigits.get(i).clear();
-            usedSubgridDigits.get(i).clear();
         }
     }
 
@@ -112,30 +169,14 @@ public class Sudoku {
                 digit = grid[i][j];
                 if (digit != 0) {
                     this.grid[i][j] = digit;
-                    usedRowDigits.get(i).add(digit);
-                    usedColDigits.get(j).add(digit);
-                    usedSubgridDigits.get(getSubgridIdx(i, j)).add(digit);
+                    generationUsedRowDigits.get(i).add(digit);
+                    generationUsedColDigits.get(j).add(digit);
+                    generationUsedSubgridDigits.get(getSubgridIdx(i, j)).add(digit);
 
-                    correct[i][j] = true;
-                    incorrectCount--;
+                    isStarterClue[i][j] = true;
                     blankCount--;
                 }
             }
-        }
-    }
-
-    /**
-     * Print the sudoku grid
-     */
-    public void printGrid() { // "\u001b[34m for blue, used for user-input numbers"
-        for (int i = 0; i < 9; i++) {
-            for (int j = 0; j < 9; j++) {
-                System.out.print(grid[i][j] != 0 ? grid[i][j] : "_");
-                if (j != 8) System.out.print(" ");
-                if (j == 2 || j == 5) System.out.print("| ");
-            }
-            System.out.println();
-            if (i == 2 || i == 5) System.out.println("------+-------+------");
         }
     }
 
@@ -167,12 +208,11 @@ public class Sudoku {
                 chosenDigit = SUBGRID_DIGITS.get(subgridIdx).get(i * 3 + j);
 
                 grid[startI + i][startJ + j] = chosenDigit;
-                usedRowDigits.get(startI + i).add(chosenDigit);
-                usedColDigits.get(startJ + j).add(chosenDigit);
-                usedSubgridDigits.get(subgridIdx).add(chosenDigit);
+                generationUsedRowDigits.get(startI + i).add(chosenDigit);
+                generationUsedColDigits.get(startJ + j).add(chosenDigit);
+                generationUsedSubgridDigits.get(subgridIdx).add(chosenDigit);
 
-                correct[startI + i][startJ + j] = true;
-                incorrectCount--;
+                isStarterClue[startI + i][startJ + j] = true;
                 blankCount--;
             }
         }
@@ -198,20 +238,18 @@ public class Sudoku {
         for (int digit : SUBGRID_DIGITS.get(subgridIdx)) {
             if (validateDigitForEmptyCell(digit, i, j)) {
                 grid[i][j] = digit;
-                usedRowDigits.get(i).add(digit);
-                usedColDigits.get(j).add(digit);
-                usedSubgridDigits.get(subgridIdx).add(digit);
-                correct[i][j] = true;
-                incorrectCount--;
+                generationUsedRowDigits.get(i).add(digit);
+                generationUsedColDigits.get(j).add(digit);
+                generationUsedSubgridDigits.get(subgridIdx).add(digit);
+                isStarterClue[i][j] = true;
                 blankCount--;
 
                 if (fillRemaining(nextIdx[0], nextIdx[1])) return true;
                 grid[i][j] = 0;
-                usedRowDigits.get(i).remove(digit);
-                usedColDigits.get(j).remove(digit);
-                usedSubgridDigits.get(subgridIdx).remove(digit);
-                correct[i][j] = false;
-                incorrectCount++;
+                generationUsedRowDigits.get(i).remove(digit);
+                generationUsedColDigits.get(j).remove(digit);
+                generationUsedSubgridDigits.get(subgridIdx).remove(digit);
+                isStarterClue[i][j] = false;
                 blankCount++;
             }
         }
@@ -222,6 +260,7 @@ public class Sudoku {
      * Check if a digit would be valid in a certain cell.
      * <p>
      *     Intended use is to check whether placing a digit in an empty cell is valid.
+     *     Mainly used for recursive sudoku generation
      * </p>
      * @param digit the digit to check
      * @param i the row index of the cell
@@ -231,43 +270,8 @@ public class Sudoku {
     boolean validateDigitForEmptyCell(int digit, int i, int j) {
         assert(0 <= i && i < 9 && 0 <= j && j < 9) : "Indices must be in-bounds";
         assert(grid[i][j] == 0) : "Cell must be empty";
-        if (!usedRowDigits.get(i).contains(digit) && !usedColDigits.get(j).contains(digit)
-                && !usedSubgridDigits.get(i / 3 * 3 + j / 3).contains(digit)) {
-            return true;
-        } else return grid[i][j] == digit;
-    }
-
-    /**
-     * Check if an existing digit is valid in the cell.
-     * <p>
-     *     Intended use is on a cell that already has a nonzero digit.
-     * </p>
-     * @param i the row index of the cell
-     * @param j the col index of the cell
-     * @return whether the cell is valid
-     */
-    boolean validateOccupiedCell(int i, int j) {
-        assert(0 <= i && i < 9 && 0 <= j && j < 9) : "Indices must be in-bounds";
-        assert(grid[i][j] != 0) : "Cell must not be 0";
-        Set<Integer> row = new HashSet<>();
-        Set<Integer> col = new HashSet<>();
-        Set<Integer> subgrid = new HashSet<>();
-
-        for (int idx = 0; idx < 9; idx++) {
-            if (idx != i) row.add(grid[idx][j]);
-            if (idx != j) col.add(grid[i][idx]);
-        }
-
-        int subgridStartI = i / 3 * 3;
-        int subgridStartJ = j / 3 * 3;
-        for (int ii = subgridStartI; ii < subgridStartI + 3; ii++) {
-            for (int jj = subgridStartJ; jj < subgridStartJ + 3; jj++) {
-                if (ii != i && jj != j) subgrid.add(grid[ii][jj]);
-            }
-        }
-
-        int digit = grid[i][j];
-        return !row.contains(digit) && !col.contains(digit) && !subgrid.contains(digit);
+        return !generationUsedRowDigits.get(i).contains(digit) && !generationUsedColDigits.get(j).contains(digit)
+                && !generationUsedSubgridDigits.get(i / 3 * 3 + j / 3).contains(digit);
     }
 
     /**
@@ -282,6 +286,7 @@ public class Sudoku {
     void removeRandomCells(int removeAmount) {
         assert(0 <= removeAmount) : "Amount to remove should be positive";
         assert(removeAmount < 81) : "Amount to remove exceeds board size";
+        assert(blankCount == 0) : "Perform this action on a full board for generation";
         List<Integer> toRemove = rand.ints(0, 81)
                 .distinct()
                 .limit(removeAmount)
@@ -295,18 +300,37 @@ public class Sudoku {
             digit = grid[i][j];
 
             grid[i][j] = 0;
-            usedRowDigits.get(i).remove(digit);
-            usedColDigits.get(j).remove(digit);
-            usedSubgridDigits.get(getSubgridIdx(i, j)).remove(digit);
+            generationUsedRowDigits.get(i).remove(digit);
+            generationUsedColDigits.get(j).remove(digit);
+            generationUsedSubgridDigits.get(getSubgridIdx(i, j)).remove(digit);
 
-            if (digit != 0) {
-                correct[i][j] = false;
-                incorrectCount++;
-                blankCount++;
-            }
+            isStarterClue[i][j] = false;
+            blankCount++;
         }
     }
-    // ===== END INSTANCE METHODS =====
+    // ===== END GENERATION METHODS =====
+
+
+    // ===== MANIPULATION METHODS =====
+
+    /**
+     * Update a cell in the grid with a digit
+     * @param digit the digit to enter
+     * @param i the row index of the cell
+     * @param j the col index of the cell
+     */
+    void enterDigit(int digit, int i, int j) { // todo: add test
+        assert(0 <= i && i <= 9 && 0 <= j && j <= 9);
+        assert(0 <= digit && digit <= 9);
+
+        if (grid[i][j] == digit || isStarterClue[i][j]) return;
+
+        if (grid[i][j] == 0) blankCount--;
+        if (digit == 0) blankCount++;
+
+        grid[i][j] = digit;
+    }
+    // ===== END MANIPULATION METHODS =====
 
 
     // ===== STATIC METHODS =====
