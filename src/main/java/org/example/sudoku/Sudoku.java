@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Random;
+import java.util.Scanner;
 
 /**
  * Sudoku class to manage a game
@@ -15,8 +16,8 @@ public class Sudoku {
     // Constants
     final static List<Integer> DIGITS = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9);
     final List<List<Integer>> SUBGRID_DIGITS = new ArrayList<>();
-    final static int MIN_REMOVE = 40;
-    final static int MAX_REMOVE = 50;
+    final static int MIN_REMOVE = 1;
+    final static int MAX_REMOVE = 2;
 
     // Grid generation helper structures
     List<Set<Integer>> generationUsedRowDigits = new ArrayList<>();
@@ -101,7 +102,7 @@ public class Sudoku {
      * Check if the sudoku is solved
      * @return if the sudoku is solved
      */
-    public boolean checkFinished() { // todo: add test
+    public boolean checkFinished() {
         if (blankCount != 0) return false;
         for (int i = 0; i < 9; i++) {
             for (int j = 0; j < 9; j++) {
@@ -319,7 +320,7 @@ public class Sudoku {
      * @param i the row index of the cell
      * @param j the col index of the cell
      */
-    void enterDigit(int digit, int i, int j) { // todo: add test
+    void enterDigit(int digit, int i, int j) {
         assert(0 <= i && i <= 9 && 0 <= j && j <= 9);
         assert(0 <= digit && digit <= 9);
 
@@ -329,6 +330,17 @@ public class Sudoku {
         if (digit == 0) blankCount++;
 
         grid[i][j] = digit;
+    }
+
+    void askForDigit() {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter an answer in the form \"<row> <col> <digit>\", 1-indexed: ");
+        String input = scanner.nextLine();
+        String[] split = input.strip().split(" ");
+        int i = Integer.parseInt(split[0]) - 1;
+        int j = Integer.parseInt(split[1]) - 1;
+        int digit = Integer.parseInt(split[2]);
+        enterDigit(digit, i, j);
     }
     // ===== END MANIPULATION METHODS =====
 
