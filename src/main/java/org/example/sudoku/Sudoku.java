@@ -16,8 +16,8 @@ public class Sudoku {
     // Constants
     final static List<Integer> DIGITS = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9);
     final List<List<Integer>> SUBGRID_DIGITS = new ArrayList<>();
-    final static int MIN_REMOVE = 1;
-    final static int MAX_REMOVE = 2;
+    final static int MIN_REMOVE = 45;
+    final static int MAX_REMOVE = 55;
 
     // Grid generation helper structures
     List<Set<Integer>> generationUsedRowDigits = new ArrayList<>();

@@ -1,13 +1,11 @@
 package org.example.sudoku;
 
+import java.io.IOException;
+
 public class App {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException, InterruptedException {
         Sudoku game = new Sudoku();
         while (!game.checkFinished()) {
-            // clear output
-//            System.out.print("\033[H\033[2J");
-//            System.out.flush();
-
             game.printGrid();
             game.askForDigit();
         }
