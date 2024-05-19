@@ -40,3 +40,6 @@ target/
 
 ### Mac OS ###
 .DS_Store
+
+### Coverage ###
+htmlReport/
